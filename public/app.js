@@ -2,6 +2,7 @@ let html5QrcodeScanner = null;
 let currentBarcode = null;
 let currentUser = null;
 let editingId = null;
+let searchTimeout = null; // Za odgodu pretrage
 
 document.addEventListener('DOMContentLoaded', () => {
     const savedUser = localStorage.getItem('inventura_user');
@@ -19,10 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-cancel').addEventListener('click', resetToScanner);
     document.getElementById('quantity').addEventListener('keydown', (e) => { if(e.key==='Enter'){e.preventDefault(); saveScan();} });
 
-    document.getElementById('btn-toggle-manual').addEventListener('click', showManualInput);
-    document.getElementById('btn-cancel-manual').addEventListener('click', resetToScanner);
-    document.getElementById('btn-manual-submit').addEventListener('click', processManualBarcode);
-    document.getElementById('manual-barcode').addEventListener('keypress', (e) => { if(e.key==='Enter') processManualBarcode(); });
+    // --- LIVE SEARCH EVENTI ---
+    document.getElementById('btn-toggle-manual').addEventListener('click', showSearch);
+    document.getElementById('btn-cancel-search').addEventListener('click', resetToScanner);
+    document.getElementById('live-search').addEventListener('input', handleSearchInput);
 
     document.getElementById('btn-error-ok').addEventListener('click', () => {
         document.getElementById('error-modal').classList.add('hidden'); resetToScanner();
@@ -76,7 +77,7 @@ function handleBarcodeFound(barcode) {
 
 function showQuantityForm(naziv, barkod) {
     document.getElementById('scanner-container').classList.add('hidden');
-    document.getElementById('manual-input-container').classList.add('hidden');
+    document.getElementById('search-container').classList.add('hidden'); // Sakrij tražilicu
     document.getElementById('quantity-section').classList.remove('hidden');
     document.getElementById('item-name').innerText = naziv;
     document.getElementById('item-barcode').innerText = barkod;
@@ -91,28 +92,63 @@ function showErrorModal() {
 
 function resetToScanner() {
     document.getElementById('quantity-section').classList.add('hidden');
-    document.getElementById('manual-input-container').classList.add('hidden');
+    document.getElementById('search-container').classList.add('hidden');
     document.getElementById('scanner-container').classList.remove('hidden');
-    currentBarcode = null; document.getElementById('manual-barcode').value = "";
+    currentBarcode = null; 
+    document.getElementById('live-search').value = ""; // Očisti tražilicu
+    document.getElementById('search-results').innerHTML = ""; // Očisti rezultate
+    document.getElementById('search-results').classList.add('hidden');
+
     try { if(html5QrcodeScanner) html5QrcodeScanner.resume(); } catch(e) {}
 }
 
-function showManualInput() {
+// --- LOGIKA ZA LIVE SEARCH ---
+function showSearch() {
     if(html5QrcodeScanner && html5QrcodeScanner.isScanning) html5QrcodeScanner.pause();
     document.getElementById('scanner-container').classList.add('hidden');
-    document.getElementById('manual-input-container').classList.remove('hidden');
-    document.getElementById('manual-barcode').focus();
+    document.getElementById('search-container').classList.remove('hidden');
+    document.getElementById('live-search').focus();
 }
 
-function processManualBarcode() {
-    const input = document.getElementById('manual-barcode');
-    const code = input.value.trim(); 
-    if(code.length > 0) {
-        handleBarcodeFound(code);
-        input.value = "";
-    } else {
-        alert("Molim unesi barkod!");
+function handleSearchInput(e) {
+    const query = e.target.value.trim();
+    const resultsList = document.getElementById('search-results');
+
+    // Debounce: Čekaj 300ms prije slanja upita (da ne gušimo server)
+    clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+        resultsList.innerHTML = "";
+        resultsList.classList.add('hidden');
+        return;
     }
+
+    searchTimeout = setTimeout(() => {
+        fetch(`/api/search?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(response => {
+                resultsList.innerHTML = "";
+                if (response.data.length > 0) {
+                    resultsList.classList.remove('hidden');
+                    response.data.forEach(item => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <span class="res-name">${item.naziv}</span>
+                            <span class="res-barcode">${item.barkod} | ${item.cijena} €</span>
+                        `;
+                        // KLIK NA REZULTAT
+                        li.addEventListener('click', () => {
+                            currentBarcode = item.barkod;
+                            showQuantityForm(item.naziv, item.barkod);
+                        });
+                        resultsList.appendChild(li);
+                    });
+                } else {
+                    resultsList.innerHTML = "<li style='color:red; text-align:center;'>Nema rezultata</li>";
+                    resultsList.classList.remove('hidden');
+                }
+            });
+    }, 300);
 }
 
 function saveScan() {
@@ -137,13 +173,10 @@ function loadMyScans() {
     fetch(`/api/skenovi?korisnik=${encodeURIComponent(currentUser)}`).then(res => res.json()).then(response => {
         const list = document.getElementById('scan-list'); list.innerHTML = '';
         let grandTotal = 0;
-
         response.data.forEach(item => {
-            // Računamo cijenu (item.cijena je iz baze, item.kolicina je skenirano)
             const cijena = item.cijena || 0;
             const subtotal = cijena * item.kolicina;
             grandTotal += subtotal;
-
             const li = document.createElement('li');
             li.innerHTML = `
                 <div class="list-left" onclick="openEdit(${item.id}, '${item.naziv}', ${item.kolicina})">
@@ -158,8 +191,6 @@ function loadMyScans() {
             `;
             list.appendChild(li);
         });
-
-        // Ažuriraj footer
         document.getElementById('grand-total').innerText = grandTotal.toFixed(2) + " €";
     });
 }

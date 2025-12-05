@@ -31,16 +31,17 @@
         <div id="scanner-container">
             <div id="reader"></div>
             <div class="manual-toggle">
-                <button id="btn-toggle-manual" class="secondary small">⌨️ Unesi barkod ručno</button>
+                <button id="btn-toggle-manual" class="secondary small">🔍 Traži / Ručni unos</button>
             </div>
         </div>
 
-        <div id="manual-input-container" class="hidden">
-            <h3>Ručni unos</h3>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" id="manual-barcode" placeholder="Barkod...">
-            <div class="buttons">
-                <button id="btn-manual-submit" class="primary">Traži</button>
-                <button id="btn-cancel-manual" class="secondary">Natrag</button>
+        <div id="search-container" class="hidden">
+            <h3>Pretraga artikla</h3>
+            <div style="position: relative;">
+                <input type="text" id="live-search" placeholder="Upiši naziv ili barkod..." autocomplete="off">
+                <button id="btn-cancel-search" class="secondary" style="margin-top:5px;">Natrag na kameru</button>
+                
+                <ul id="search-results" class="results-list hidden"></ul>
             </div>
         </div>
 
@@ -61,12 +62,11 @@
         
         <h3>Moji unosi</h3>
         <div class="list-wrapper">
-            <ul id="scan-list">
-                </ul>
+            <ul id="scan-list"></ul>
         </div>
         
         <div class="footer-total">
-            <div class="total-label">UKUPNO SKENIRANO:</div>
+            <div class="total-label">UKUPNO:</div>
             <div class="total-amount" id="grand-total">0.00 €</div>
         </div>
     </div>

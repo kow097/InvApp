@@ -46,7 +46,23 @@ app.delete('/api/users/:id', (req, res) => {
     });
 });
 
-// --- 3. SKENIRANJE ---
+// --- 3. SKENIRANJE I PRETRAGA ---
+
+// NOVO: Live Search ruta
+app.get('/api/search', (req, res) => {
+    const q = req.query.q;
+    if (!q || q.length < 2) return res.json({ data: [] }); // Ne traži ako je manje od 2 slova
+
+    // Tražimo po barkodu ILI po nazivu (limitiramo na 20 rezultata da ne gušimo mobitel)
+    const sql = `SELECT * FROM artikli WHERE naziv LIKE ? OR barkod LIKE ? LIMIT 20`;
+    const param = `%${q}%`; // % znači "bilo što prije ili poslije"
+
+    db.all(sql, [param, param], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
 app.get('/api/artikl/:barkod', (req, res) => {
     const barkod = req.params.barkod;
     db.get("SELECT * FROM artikli WHERE barkod = ?", [barkod], (err, row) => {
@@ -66,7 +82,6 @@ app.post('/api/skeniraj', (req, res) => {
     });
 });
 
-// NOVO: Dohvaćamo i cijenu artikla (JOIN) da možemo računati total na mobitelu
 app.get('/api/skenovi', (req, res) => {
     const korisnik = req.query.korisnik;
     const sql = `
@@ -97,83 +112,48 @@ app.delete('/api/skeniraj/:id', (req, res) => {
     });
 });
 
-// --- 4. PAMETNI EXPORT (UČITAVA TVOJU BAZU I DODAJE STUPAC Y) ---
+// --- 4. EXPORT ---
 app.get('/api/export', (req, res) => {
     const INPUT_FILE = 'baza.xlsx';
+    if (!fs.existsSync(INPUT_FILE)) return res.status(500).send("Greška: Nema datoteke baza.xlsx!");
 
-    if (!fs.existsSync(INPUT_FILE)) {
-        return res.status(500).send("Greška: Nema datoteke baza.xlsx na serveru!");
-    }
-
-    // 1. Prvo dohvati sve zbrojene količine iz baze
-    const sqlSumarno = `
-        SELECT barkod, SUM(kolicina) as ukupno 
-        FROM skenovi 
-        GROUP BY barkod
-    `;
-
+    const sqlSumarno = `SELECT barkod, SUM(kolicina) as ukupno FROM skenovi GROUP BY barkod`;
     db.all(sqlSumarno, [], (err, scannedRows) => {
-        if (err) return res.status(500).send("Greška baze pri exportu");
-
-        // Pretvori rezultate u mapu radi bržeg pretraživanja:  {'barkod123': 50, 'barkod456': 12}
+        if (err) return res.status(500).send("Greška baze");
+        
         const skeniranoMap = {};
-        scannedRows.forEach(row => {
-            skeniranoMap[row.barkod] = row.ukupno;
-        });
+        scannedRows.forEach(row => skeniranoMap[row.barkod] = row.ukupno);
 
         try {
-            // 2. Učitaj originalnu Excelicu
             const workbook = xlsx.readFile(INPUT_FILE);
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-
-            // Pretvori u JSON (header: "A" znači da zadržavamo strukturu stupaca A, B, C...)
             const data = xlsx.utils.sheet_to_json(worksheet, { header: "A", defval: "" });
 
-            // 3. Dodaj zaglavlje u stupac Y (u prvom redu)
-            if (data.length > 0) {
-                data[0]['Y'] = "Inventura_Kolicina";
-            }
+            if (data.length > 0) data[0]['Y'] = "Inventura_Kolicina";
 
-            // 4. Prođi kroz sve ostale redove i upiši količine
             for (let i = 1; i < data.length; i++) {
                 const row = data[i];
-                const barkodIzExcela = row['N'] ? String(row['N']).trim() : null; // Tvoj barkod je u N
-
-                if (barkodIzExcela && skeniranoMap[barkodIzExcela]) {
-                    // Ako imamo taj barkod skeniran, upiši količinu
-                    row['Y'] = skeniranoMap[barkodIzExcela];
-                } else {
-                    // Ako nije skeniran, piši 0
-                    row['Y'] = 0;
-                }
+                const barkod = row['N'] ? String(row['N']).trim() : null;
+                row['Y'] = (barkod && skeniranoMap[barkod]) ? skeniranoMap[barkod] : 0;
             }
 
-            // 5. Kreiraj novi Sheet i Workbook
             const newSheet = xlsx.utils.json_to_sheet(data, { header: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y"], skipHeader: true });
             const newWorkbook = xlsx.utils.book_new();
             xlsx.utils.book_append_sheet(newWorkbook, newSheet, "Stanje");
-
-            // 6. Pošalji nazad
             const buffer = xlsx.write(newWorkbook, { type: 'buffer', bookType: 'xlsx' });
-            const dateStr = new Date().toISOString().slice(0,10);
-            res.setHeader('Content-Disposition', `attachment; filename="Inventura_Popunjena_${dateStr}.xlsx"`);
+            
+            res.setHeader('Content-Disposition', `attachment; filename="Inventura_Popunjena_${new Date().toISOString().slice(0,10)}.xlsx"`);
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.send(buffer);
-
-        } catch (excelErr) {
-            console.error(excelErr);
-            res.status(500).send("Greška pri obradi Excela: " + excelErr.message);
-        }
+        } catch (e) { res.status(500).send("Greška Excela: " + e.message); }
     });
 });
 
-// --- 5. RUTA ZA GAŠENJE ---
+// --- 5. SHUTDOWN ---
 app.post('/api/shutdown', (req, res) => {
     res.json({ success: true });
-    setTimeout(() => {
-        exec('taskkill /F /IM node.exe /IM ngrok.exe', () => process.exit(0));
-    }, 1000);
+    setTimeout(() => { exec('taskkill /F /IM node.exe /IM ngrok.exe', () => process.exit(0)); }, 1000);
 });
 
 app.listen(PORT, '0.0.0.0', () => {
