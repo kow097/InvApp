@@ -1,0 +1,6 @@
+C:\PoBr1\Aren281\Podatci
+aresE (najnoviji datum izmjene)
+F11 za prikaz svih artikala
+tbArtikala1Main
+CTRL+A, CTRL+C
+i sve kopirati u bazu za inventuru

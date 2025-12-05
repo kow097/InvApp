@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inventura</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+
+    <div id="login-screen" class="overlay">
+        <div class="card">
+            <h2>🔒 Prijava</h2>
+            <p>Unesi PIN</p>
+            <input type="password" id="pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="2" autofocus>
+            <button id="btn-login" class="primary">ULAZ</button>
+            <p id="login-error" class="error-text hidden">Netočan PIN!</p>
+        </div>
+    </div>
+
+    <div id="main-app" class="container hidden">
+        <div class="header-row">
+            <h1>📦 Inventura</h1>
+            <div id="user-display">
+                <span id="user-name-span">...</span> 
+                <button id="btn-logout" class="small-btn">Izlaz</button>
+            </div>
+        </div>
+        
+        <div id="scanner-container">
+            <div id="reader"></div>
+            <div class="manual-toggle">
+                <button id="btn-toggle-manual" class="secondary small">⌨️ Unesi barkod ručno</button>
+            </div>
+        </div>
+
+        <div id="manual-input-container" class="hidden">
+            <h3>Ručni unos</h3>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" id="manual-barcode" placeholder="Barkod...">
+            <div class="buttons">
+                <button id="btn-manual-submit" class="primary">Traži</button>
+                <button id="btn-cancel-manual" class="secondary">Natrag</button>
+            </div>
+        </div>
+
+        <div id="quantity-section" class="hidden">
+            <h2 id="item-name">...</h2>
+            <p id="item-barcode" class="small-text">...</p>
+            <div class="form-group">
+                <label>Količina:</label>
+                <input type="number" id="quantity" inputmode="numeric" pattern="[0-9]*" value="1">
+            </div>
+            <div class="buttons">
+                <button id="btn-save" class="primary">SPREMI</button>
+                <button id="btn-cancel" class="secondary">Poništi</button>
+            </div>
+        </div>
+
+        <hr>
+        
+        <h3>Moji unosi</h3>
+        <div class="list-wrapper">
+            <ul id="scan-list">
+                </ul>
+        </div>
+        
+        <div class="footer-total">
+            <div class="total-label">UKUPNO SKENIRANO:</div>
+            <div class="total-amount" id="grand-total">0.00 €</div>
+        </div>
+    </div>
+
+    <div id="error-modal" class="modal hidden">
+        <div class="modal-content error-content">
+            <div class="icon">⛔</div>
+            <h3>Nepoznat Artikl!</h3>
+            <p style="font-weight:bold; color:red;">ODLOŽI SA STRANE!</p>
+            <button id="btn-error-ok" class="secondary">U redu</button>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Ispravak</h3>
+            <p id="edit-item-name"></p>
+            <input type="number" id="edit-quantity" inputmode="numeric">
+            <div class="buttons">
+                <button id="btn-update" class="primary">Spremi</button>
+                <button id="btn-close-edit" class="secondary">Zatvori</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="hidden">✅ Spremljeno!</div>
+    <script src="app.js"></script>
+</body>
+</html>

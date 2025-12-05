@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .user-list { list-style: none; padding: 0; margin-top: 20px; }
+        .user-list li { background: #f9f9f9; border-bottom: 1px solid #eee; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .user-pin { background: #333; color: #fff; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; }
+        .btn-remove { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+        
+        /* Gumb za EXPORT (Zeleni) */
+        .btn-export {
+            display: block; width: 100%; text-align: center;
+            background-color: #28a745; color: white; padding: 20px;
+            font-size: 1.2rem; font-weight: bold; text-decoration: none;
+            border-radius: 8px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-export:hover { background-color: #218838; }
+
+        /* NOVO: Gumb za GAŠENJE (Crveni) */
+        .btn-shutdown {
+            display: block; width: 100%; text-align: center;
+            background-color: #dc3545; color: white; padding: 15px;
+            font-size: 1rem; font-weight: bold; border: none; cursor: pointer;
+            border-radius: 8px; margin-top: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-shutdown:hover { background-color: #c82333; }
+        .btn-shutdown:active { transform: scale(0.98); }
+
+        .section-title { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <h1 style="text-align: center; margin-bottom: 30px;">🛠️ Voditelj Inventure</h1>
+        
+        <h3 class="section-title">📊 Izvještaji</h3>
+        <a href="/api/export" class="btn-export">📥 PREUZMI FINALNI EXCEL</a>
+
+        <h3 class="section-title" style="margin-top: 40px;">👤 Upravljanje Zaposlenicima</h3>
+        <div class="card" style="width:100%; box-shadow:none; border: 1px solid #eee; background: #fafafa;">
+            <h4>Dodaj Novog Radnika</h4>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="new-name" placeholder="Ime" style="flex: 2; font-size: 1rem; margin:0;">
+                <input type="number" id="new-pin" placeholder="PIN" style="flex: 1; font-size: 1rem; margin:0;">
+            </div>
+            <button onclick="addUser()" class="primary" style="margin-top: 10px;">DODAJ</button>
+        </div>
+        <ul id="users-list" class="user-list"></ul>
+
+        <hr style="margin-top: 50px;">
+        <button onclick="shutdownServer()" class="btn-shutdown">🚨 UGASI SERVER I IZAĐI</button>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadUsers);
+        
+        function loadUsers() {
+            fetch('/api/users').then(res => res.json()).then(r => {
+                const list = document.getElementById('users-list'); list.innerHTML = '';
+                r.data.forEach(u => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>${u.ime} <span class="user-pin">${u.pin}</span></span><button class="btn-remove" onclick="deleteUser(${u.id})">Obriši</button>`;
+                    list.appendChild(li);
+                });
+            });
+        }
+        
+        function addUser() {
+            const ime = document.getElementById('new-name').value.trim();
+            const pin = document.getElementById('new-pin').value.trim();
+            if (!ime || !pin) return alert("Upiši i ime i PIN!");
+            fetch('/api/users', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ime, pin })
+            }).then(res => res.json()).then(data => {
+                if (data.success) { document.getElementById('new-name').value=''; document.getElementById('new-pin').value=''; loadUsers(); }
+                else alert("Greška: " + data.error);
+            });
+        }
+        
+        function deleteUser(id) {
+            if(!confirm("Obrisati?")) return;
+            fetch(`/api/users/${id}`, { method: 'DELETE' }).then(() => loadUsers());
+        }
+
+        // --- FUNKCIJA ZA GAŠENJE ---
+        function shutdownServer() {
+            if(!confirm("Jesi li siguran da želiš ugasiti cijeli sustav?\n(Server i Ngrok će se ugasiti)")) return;
+
+            fetch('/api/shutdown', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                alert("Sustav se gasi... Možeš zatvoriti ovaj prozor.");
+                window.close(); // Pokušava zatvoriti tab
+            })
+            .catch(() => alert("Sustav je ugašen."));
+        }
+    </script>
+</body>
+</html>
