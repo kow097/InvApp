@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="hr">
 <head>
     <meta charset="UTF-8">
@@ -6,56 +6,123 @@
     <title>Admin Panel</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .admin-container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .user-list { list-style: none; padding: 0; margin-top: 20px; }
-        .user-list li { background: #f9f9f9; border-bottom: 1px solid #eee; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .user-pin { background: #333; color: #fff; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; }
-        .btn-remove { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
-        
-        /* Gumb za EXPORT (Zeleni) */
-        .btn-export {
-            display: block; width: 100%; text-align: center;
-            background-color: #28a745; color: white; padding: 20px;
-            font-size: 1.2rem; font-weight: bold; text-decoration: none;
-            border-radius: 8px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        /* Proširili smo container da stanu dva stupca */
+        .admin-container { 
+            max-width: 1000px; 
+            margin: 30px auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
         }
-        .btn-export:hover { background-color: #218838; }
 
-        /* NOVO: Gumb za GAŠENJE (Crveni) */
-        .btn-shutdown {
-            display: block; width: 100%; text-align: center;
-            background-color: #dc3545; color: white; padding: 15px;
-            font-size: 1rem; font-weight: bold; border: none; cursor: pointer;
-            border-radius: 8px; margin-top: 50px;
+        /* Naslov */
+        h1 { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+
+        /* MREŽA (GRID) - Dva stupca */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px; /* Lijevo šire, desno fiksno 350px */
+            gap: 40px;
+            align-items: start;
+        }
+
+        /* RESPONSIVE: Na mobitelu neka ide jedno ispod drugog */
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        /* LIJEVI STUPAC - Zaposlenici */
+        .employee-section { }
+        
+        .user-list { list-style: none; padding: 0; margin-top: 20px; max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; }
+        .user-list li { background: #fff; border-bottom: 1px solid #eee; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .user-pin { background: #333; color: #fff; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; margin-left: 10px;}
+        .btn-remove { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+
+        /* DESNI STUPAC - Akcije */
+        .action-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        /* STILOVI GUMBA */
+        .btn-export { 
+            display: block; width: 100%; text-align: center; 
+            background-color: #28a745; color: white; 
+            padding: 20px; font-size: 1.1rem; font-weight: bold; 
+            text-decoration: none; border-radius: 8px; 
+            margin-bottom: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            transition: 0.2s;
+        }
+        .btn-export:hover { background-color: #218838; transform: translateY(-2px); }
+
+        .btn-reset { 
+            display: block; width: 100%; text-align: center; 
+            background-color: #fd7e14; color: white; 
+            padding: 15px; font-size: 1rem; font-weight: bold; 
+            border: none; cursor: pointer; border-radius: 8px; 
+            margin-bottom: 40px; /* Razmak do crvenog gumba */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-reset:hover { background-color: #e36d0e; }
+
+        .btn-shutdown { 
+            display: block; width: 100%; text-align: center; 
+            background-color: #dc3545; color: white; 
+            padding: 15px; font-size: 1rem; font-weight: bold; 
+            border: none; cursor: pointer; border-radius: 8px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .btn-shutdown:hover { background-color: #c82333; }
-        .btn-shutdown:active { transform: scale(0.98); }
 
-        .section-title { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; color: #555; }
+        /* Kartica za dodavanje */
+        .add-user-card {
+            background: #e7f1ff; padding: 20px; border-radius: 8px; border: 1px solid #b6d4fe;
+        }
+        .section-title { margin-top: 0; color: #555; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 20px;}
     </style>
 </head>
 <body>
     <div class="admin-container">
-        <h1 style="text-align: center; margin-bottom: 30px;">🛠️ Voditelj Inventure</h1>
+        <h1>🛠️ Voditelj Inventure</h1>
         
-        <h3 class="section-title">📊 Izvještaji</h3>
-        <a href="/api/export" class="btn-export">📥 PREUZMI FINALNI EXCEL</a>
+        <div class="dashboard-grid">
+            
+            <div class="employee-section">
+                <h3 class="section-title">👤 Zaposlenici</h3>
+                
+                <div class="add-user-card">
+                    <h4 style="margin-top:0;">Dodaj Novog</h4>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" id="new-name" placeholder="Ime" style="flex: 2; padding: 8px; font-size: 1rem;">
+                        <input type="number" id="new-pin" placeholder="PIN" style="flex: 1; padding: 8px; font-size: 1rem;">
+                    </div>
+                    <button onclick="addUser()" class="primary" style="width: 100%; padding: 10px; cursor: pointer; background: #0d6efd; color: white; border: none; border-radius: 5px; font-weight: bold;">DODAJ</button>
+                </div>
 
-        <h3 class="section-title" style="margin-top: 40px;">👤 Upravljanje Zaposlenicima</h3>
-        <div class="card" style="width:100%; box-shadow:none; border: 1px solid #eee; background: #fafafa;">
-            <h4>Dodaj Novog Radnika</h4>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="new-name" placeholder="Ime" style="flex: 2; font-size: 1rem; margin:0;">
-                <input type="number" id="new-pin" placeholder="PIN" style="flex: 1; font-size: 1rem; margin:0;">
+                <ul id="users-list" class="user-list"></ul>
             </div>
-            <button onclick="addUser()" class="primary" style="margin-top: 10px;">DODAJ</button>
+
+            <div class="action-section">
+                <h3 class="section-title">⚡ Akcije</h3>
+                
+                <p style="margin-bottom: 5px; font-size: 0.9rem; color: #666;">Kraj inventure:</p>
+                <a href="/api/export" class="btn-export">📥 PREUZMI EXCEL</a>
+
+                <p style="margin-bottom: 5px; font-size: 0.9rem; color: #666;">Priprema novog skladišta:</p>
+                <button onclick="resetInventory()" class="btn-reset">♻️ OBRIŠI SKENOVE</button>
+
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ddd;">
+
+                <p style="margin-bottom: 5px; font-size: 0.9rem; color: #666;">Kraj radnog dana:</p>
+                <button onclick="shutdownServer()" class="btn-shutdown">🚨 UGASI SUSTAV</button>
+            </div>
+
         </div>
-        <ul id="users-list" class="user-list"></ul>
-
-        <hr style="margin-top: 50px;">
-        <button onclick="shutdownServer()" class="btn-shutdown">🚨 UGASI SERVER I IZAĐI</button>
-
     </div>
 
     <script>
@@ -71,36 +138,28 @@
                 });
             });
         }
-        
         function addUser() {
             const ime = document.getElementById('new-name').value.trim();
             const pin = document.getElementById('new-pin').value.trim();
             if (!ime || !pin) return alert("Upiši i ime i PIN!");
-            fetch('/api/users', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ime, pin })
-            }).then(res => res.json()).then(data => {
+            fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ime, pin }) })
+            .then(res => res.json()).then(data => {
                 if (data.success) { document.getElementById('new-name').value=''; document.getElementById('new-pin').value=''; loadUsers(); }
                 else alert("Greška: " + data.error);
             });
         }
-        
         function deleteUser(id) {
-            if(!confirm("Obrisati?")) return;
+            if(!confirm("Obrisati radnika?")) return;
             fetch(`/api/users/${id}`, { method: 'DELETE' }).then(() => loadUsers());
         }
-
-        // --- FUNKCIJA ZA GAŠENJE ---
+        function resetInventory() {
+            if(!confirm("⚠️ PAŽNJA! Ovo trajno briše sve skenirane količine!")) return;
+            if(!confirm("Jesi li siguran da si prvo preuzeo Excel?")) return;
+            fetch('/api/reset-inventory', { method: 'POST' }).then(res => res.json()).then(d => { if(d.success) alert("Skladište resetirano!"); });
+        }
         function shutdownServer() {
-            if(!confirm("Jesi li siguran da želiš ugasiti cijeli sustav?\n(Server i Ngrok će se ugasiti)")) return;
-
-            fetch('/api/shutdown', { method: 'POST' })
-            .then(res => res.json())
-            .then(data => {
-                alert("Sustav se gasi... Možeš zatvoriti ovaj prozor.");
-                window.close(); // Pokušava zatvoriti tab
-            })
-            .catch(() => alert("Sustav je ugašen."));
+            if(!confirm("Ugasi cijeli sustav?")) return;
+            fetch('/api/shutdown', { method: 'POST' }).then(() => { alert("Sustav se gasi..."); window.close(); });
         }
     </script>
 </body>
